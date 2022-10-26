@@ -212,9 +212,13 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
+        let mut cfg: config::Config = confy::load("piwacy", None)?;
+        if !cfg.endpoint.ends_with('/') {
+            cfg.endpoint.push('/');
+        }
 
         let guild_id = GuildId(
-                889984145290326026
+                cfg.guildid
         );
 
         let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
