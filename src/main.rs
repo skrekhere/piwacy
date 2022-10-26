@@ -8,6 +8,7 @@ use serde_json::{Value};
 use serenity::async_trait;
 use serenity::model::application::command::Command;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType, InteractionType};
+use serenity::model::application::interaction::message_component::MessageComponentInteraction;
 use serenity::model::gateway::Ready;
 use serenity::model::id::GuildId;
 use serenity::prelude::*;
@@ -35,133 +36,10 @@ impl EventHandler for Handler {
             }).unwrap();
             match json.get("action").unwrap().as_str().unwrap() {
                 "f" => {
-                    component.defer(&ctx.http).await.unwrap();
-                    let newpage = json.get("page").unwrap().as_u64().unwrap() + 1;
-                    let big = torrentfind::query(json.get("query").unwrap().as_str().unwrap(), Some(newpage as u32), 5).unwrap_or_else(|e| {
-                        return torrentfind::models::Results::Results(Vec::new());
-                    });
-                    if big == torrentfind::models::Results::Results(Vec::new()) {
-                        if let Err(big) = component.get_interaction_response(&ctx.http).await.unwrap().edit(&ctx.http, |response| {
-                            response.embed(|e| {
-                                e.title("No results!")
-                            }).set_components(serenity::builder::CreateComponents(Vec::new())
-                            .create_action_row(|row| {
-                                row.create_button(|button| {
-                                    button.label("<")
-                                    .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap(), newpage))
-                                })
-                            }).clone())
-                        }).await {
-                            println!("{}", big);
-                        };
-                        return;
-                    }
-                    let mut s: String = String::from("");
-                    let mut i: u64 = 0;
-                    println!("yo");
-                    if let torrentfind::models::Results::Results(vector) = big {
-                        println!("yo");
-                        for torrent in vector.clone() {
-                            i += 1;
-                            s.push_str(format!("{}. {} - {} \n", i + ((newpage - 1) * 5), torrent.name.as_str(), torrent.size.as_str()).as_str());
-                        }
-                        println!("yo");
-                        if let Err(big) = component.get_interaction_response(&ctx.http).await.unwrap().edit(&ctx.http,|response| {
-                            println!("yo");
-                            response
-                            .embed(|e| {
-                                e.title("Search Results")
-                                .description(format!("```\n{}\n```", s))
-                            }).set_components(serenity::builder::CreateComponents(Vec::new())
-                            .create_action_row(|row| {
-                                row.create_button(|button| {
-                                    button.label("<")
-                                    .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap(), newpage))
-                                }).create_button(|button| {
-                                    button.label(">")
-                                    .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"f\"}}", json.get("query").unwrap(), newpage))
-                                })
-                            }).create_action_row(|row| {
-                                let mut j: u64 = 0;
-                                let mut poggies = vector.clone();
-                                for torrent in poggies {
-                                    j += 1;
-                                    row.create_button(|button| {
-                                        button.label(format!("{}", j + ((newpage - 1) * 5)))
-                                        .custom_id(format!("{{\"action\":\"g\", \"query\": \"{}\", \"page\": {}, \"number\": {}}}", json.get("query").unwrap(), newpage, j))
-                                    });
-                                }
-                                row
-                            }).clone())
-
-                        }).await{
-                            println!("{}", big)
-                        };
-                        println!("yo");
-                    }
+                    newpage(component, json, ctx, 1).await;
                 }
                 "b" => {
-                    component.defer(&ctx.http).await.unwrap();
-                    let newpage = json.get("page").unwrap().as_u64().unwrap() - 1;
-                    println!("{}", newpage);
-                    let big = torrentfind::query(json.get("query").unwrap().as_str().unwrap(), Some(newpage as u32), 5).unwrap_or_else(|e| {
-                        return torrentfind::models::Results::Results(Vec::new());
-                    });
-                    if big == torrentfind::models::Results::Results(Vec::new()) {
-                        if let Err(big) = component.get_interaction_response(&ctx.http).await.unwrap().edit(&ctx.http, |response| {
-                            response.embed(|e| {
-                                e.title("No results!")
-                            }).set_components(serenity::builder::CreateComponents(Vec::new()))
-                        }).await {
-                            println!("{}", big);
-                        };
-                        return;
-                    }
-                    let mut s: String = String::from("");
-                    let mut i: u64 = 0;
-                    println!("yo");
-                    if let torrentfind::models::Results::Results(vector) = big {
-                        println!("yo");
-                        for torrent in vector.clone() {
-                            i += 1;
-                            s.push_str(format!("{}. {} - {} \n", i + ((newpage - 1) * 5), torrent.name.as_str(), torrent.size.as_str()).as_str());
-                        }
-                        println!("yo");
-                        if let Err(big) = component.get_interaction_response(&ctx.http).await.unwrap().edit(&ctx.http,|response| {
-                            println!("yo");
-                            response
-                            .embed(|e| {
-                                e.title("Search Results")
-                                .description(format!("```\n{}\n```", s))
-                            }).set_components(serenity::builder::CreateComponents(Vec::new()).create_action_row(|row| {
-                                    if(newpage - 1 != 0){
-                                        row.create_button(|button| {
-                                            button.label("<")
-                                            .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap(), newpage))
-                                        });
-                                    }
-                                    row.create_button(|button| {
-                                        button.label(">")
-                                        .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"f\"}}", json.get("query").unwrap(), newpage))
-                                    })
-                                }).create_action_row(|row| {
-                                    let mut j: u64 = 0;
-                                    let mut poggies = vector.clone();
-                                    for torrent in poggies {
-                                        j += 1;
-                                        row.create_button(|button| {
-                                            button.label(format!("{}", j + ((newpage - 1) * 5)))
-                                            .custom_id(format!("{{\"action\":\"g\", \"query\": \"{}\", \"page\": {}, \"number\": {}}}", json.get("query").unwrap(), newpage, j))
-                                        });
-                                    }
-                                    row
-                                }).clone())
-
-                        }).await{
-                            println!("{}", big)
-                        };
-                        println!("yo");
-                    }
+                    newpage(component, json, ctx, -1).await;
                 }
                 "g" => {
                     let big = torrentfind::query(json.get("query").unwrap().as_str().unwrap(), Some(json.get("page").unwrap().as_u64().unwrap() as u32), 5).unwrap_or_else(|e| {
@@ -228,6 +106,79 @@ impl EventHandler for Handler {
         .await;
 
         println!("I now have the following guild slash commands: {:#?}", commands);
+    }
+}
+
+async fn newpage(component: MessageComponentInteraction, json: Value, ctx: Context, offset: i64){
+    component.defer(&ctx.http).await.unwrap();
+    let newpage = json.get("page").unwrap().as_i64().unwrap() + offset;
+    println!("{}", newpage);
+    let big = torrentfind::query(json.get("query").unwrap().as_str().unwrap(), Some(newpage as u32), 5).unwrap_or_else(|e| {
+        return torrentfind::models::Results::Results(Vec::new());
+    });
+    if big == torrentfind::models::Results::Results(Vec::new()) {
+        if let Err(big) = component.get_interaction_response(&ctx.http).await.unwrap().edit(&ctx.http, |response| {
+            response.embed(|e| {
+                e.title("No results!")
+            }).set_components(serenity::builder::CreateComponents(Vec::new()).create_action_row(|row| {
+                if newpage != 1 {
+                    row.create_button(|button| {
+                        button.label("<")
+                        .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap(), newpage))
+                    })
+                } else {
+                    row
+                }
+            }).clone())
+        }).await {
+            println!("{}", big);
+        };
+        return;
+    }
+    let mut s: String = String::from("");
+    let mut i: i64 = 0;
+    println!("yo");
+    if let torrentfind::models::Results::Results(vector) = big {
+        println!("yo");
+        for torrent in vector.clone() {
+            i += 1;
+            s.push_str(format!("{}. {} - {} \n", i + ((newpage - 1) * 5), torrent.name.as_str(), torrent.size.as_str()).as_str());
+        }
+        println!("yo");
+        if let Err(big) = component.get_interaction_response(&ctx.http).await.unwrap().edit(&ctx.http,|response| {
+            println!("yo");
+            response
+            .embed(|e| {
+                e.title("Search Results")
+                .description(format!("```\n{}\n```", s))
+            }).set_components(serenity::builder::CreateComponents(Vec::new()).create_action_row(|row| {
+                if(newpage - 1 != 0){
+                    row.create_button(|button| {
+                        button.label("<")
+                        .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap(), newpage))
+                    });
+                }
+                row.create_button(|button| {
+                    button.label(">")
+                    .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"f\"}}", json.get("query").unwrap(), newpage))
+                })
+            }).create_action_row(|row| {
+                let mut j: i64 = 0;
+                let mut poggies = vector.clone();
+                for torrent in poggies {
+                    j += 1;
+                    row.create_button(|button| {
+                        button.label(format!("{}", j + ((newpage - 1) * 5)))
+                        .custom_id(format!("{{\"action\":\"g\", \"query\": \"{}\", \"page\": {}, \"number\": {}}}", json.get("query").unwrap(), newpage, j))
+                    });
+                }
+                row
+            }).clone())
+
+        }).await{
+            println!("{}", big)
+        };
+        println!("yo");
     }
 }
 

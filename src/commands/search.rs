@@ -7,6 +7,7 @@ use crate::Deluge;
 
 pub async fn run(_options: &[CommandDataOption], command: &serenity::model::application::interaction::application_command::ApplicationCommandInteraction, ctx: Context) -> String {
     let option = _options.get(0).unwrap().resolved.as_ref().unwrap();
+    println!("yo");
     if let CommandDataOptionValue::String(value) = option {
         let big = torrentfind::query(value, Some(1 as u32), 5).unwrap_or_else(|e| {
             return torrentfind::models::Results::Results(Vec::new());
@@ -40,7 +41,7 @@ pub async fn run(_options: &[CommandDataOption], command: &serenity::model::appl
                     c.create_action_row(|row| {
                         row.create_button(|button| {
                             button.label(">")
-                            .custom_id(format!("{{\"query\": {}, \"page\": 1, \"action\": \"f\"}}", value))
+                            .custom_id(format!("{{\"query\": \"{}\", \"page\": 1, \"action\": \"f\"}}", value))
                         })
                     }).create_action_row(|row| {
                         let mut j: u32 = 0;
