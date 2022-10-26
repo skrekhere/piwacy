@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! torrentfind scrapes the 1337x.to website for torrents
 
 extern crate reqwest;

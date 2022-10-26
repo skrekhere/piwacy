@@ -212,7 +212,7 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
-        let mut cfg: config::Config = confy::load("piwacy", None)?;
+        let mut cfg: config::Config = confy::load("piwacy", None).unwrap();
         if !cfg.endpoint.ends_with('/') {
             cfg.endpoint.push('/');
         }
