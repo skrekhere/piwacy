@@ -3,16 +3,19 @@ mod config;
 mod commands;
 
 use crate::deluge_rpc::Deluge;
+use config::Config;
 
 use serde_json::{Value};
 use serenity::async_trait;
-use serenity::model::application::command::Command;
-use serenity::model::application::interaction::{Interaction, InteractionResponseType, InteractionType};
+use serenity::model::application::interaction::{Interaction};
 use serenity::model::application::interaction::message_component::MessageComponentInteraction;
 use serenity::model::gateway::Ready;
 use serenity::model::id::GuildId;
 use serenity::prelude::*;
 
+use once_cell::sync::Lazy;
+
+pub static cfg: Lazy<Config> = Lazy::new(|| { confy::load("piwacy", None).unwrap()});
 struct Handler {
 }
 
@@ -22,13 +25,14 @@ impl EventHandler for Handler {
         if let Interaction::ApplicationCommand(command) = interaction {
             println!("Received command interaction: {:#?}", command);
 
-            let content = match command.data.name.as_str() {
+            let _content = match command.data.name.as_str() {
                 "search" => commands::search::run(&command.data.options, &command, ctx).await,
+                "list" => commands::list::run(ctx, &command).await,
                 _ => "not implemented :(".to_string(),
             };
 
 
-        } else if let Interaction::MessageComponent(mut component) = interaction {
+        } else if let Interaction::MessageComponent(component) = interaction {
             println!("{}", component.data.custom_id);
             let json: Value = serde_json::from_str(component.data.custom_id.as_str()).unwrap_or_else(|e| {
                 println!("{}", e);
@@ -67,12 +71,12 @@ impl EventHandler for Handler {
                         if category == "Movies" {
                             category = "MV";
                         }
-                        let mut cfg: config::Config = confy::load("piwacy", None).unwrap();
-                        if !cfg.endpoint.ends_with('/') {
-                            cfg.endpoint.push('/');
+                        if category == "Anime" {
+                            category = "TV";
                         }
-                        let mut deluge = Deluge::new(String::from(cfg.endpoint)).unwrap();
-                        deluge.login(cfg.password).await.unwrap_or_else(|e| {
+                        println!("yo");
+                        let mut deluge = Deluge::new(String::from(&cfg.endpoint)).unwrap();
+                        deluge.login((&cfg.password).to_string()).await.unwrap_or_else(|e| {
                             println!("{}", e);
                         });
                         deluge.connect_to_first_available_host().await.unwrap_or_else(|e| {
@@ -81,6 +85,13 @@ impl EventHandler for Handler {
                         deluge.add_magnet(magnet.link, format!("/downloads/{}", category)).await.unwrap_or_else(|e| {
                             println!("{}", e);
                         });
+                        println!("yo");
+                        component.create_followup_message(&ctx.http, |response| {
+                            response.embed(|e| {
+                                e.title("Success!")
+                                .description(format!("Downloading `{}`", torrent.name.as_str()))
+                            })
+                        }).await.unwrap();
                     }
                 }
                 _ => panic!("bad!")
@@ -90,10 +101,6 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
-        let mut cfg: config::Config = confy::load("piwacy", None).unwrap();
-        if !cfg.endpoint.ends_with('/') {
-            cfg.endpoint.push('/');
-        }
 
         let guild_id = GuildId(
                 cfg.guildid
@@ -102,6 +109,7 @@ impl EventHandler for Handler {
         let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
             commands
             .create_application_command(|command| commands::search::register(command))
+            .create_application_command(|command| commands::list::register(command))
         })
         .await;
 
@@ -113,7 +121,7 @@ async fn newpage(component: MessageComponentInteraction, json: Value, ctx: Conte
     component.defer(&ctx.http).await.unwrap();
     let newpage = json.get("page").unwrap().as_i64().unwrap() + offset;
     println!("{}", newpage);
-    let big = torrentfind::query(json.get("query").unwrap().as_str().unwrap(), Some(newpage as u32), 5).unwrap_or_else(|e| {
+    let big = torrentfind::query(json.get("query").unwrap().as_str().unwrap(), Some(newpage as u32), 5).unwrap_or_else(|_| {
         return torrentfind::models::Results::Results(Vec::new());
     });
     if big == torrentfind::models::Results::Results(Vec::new()) {
@@ -152,7 +160,7 @@ async fn newpage(component: MessageComponentInteraction, json: Value, ctx: Conte
                 e.title("Search Results")
                 .description(format!("```\n{}\n```", s))
             }).set_components(serenity::builder::CreateComponents(Vec::new()).create_action_row(|row| {
-                if(newpage - 1 != 0){
+                if newpage - 1 != 0 {
                     row.create_button(|button| {
                         button.label("<")
                         .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap(), newpage))
@@ -164,8 +172,8 @@ async fn newpage(component: MessageComponentInteraction, json: Value, ctx: Conte
                 })
             }).create_action_row(|row| {
                 let mut j: i64 = 0;
-                let mut poggies = vector.clone();
-                for torrent in poggies {
+                let poggies = vector.clone();
+                for _ in poggies {
                     j += 1;
                     row.create_button(|button| {
                         button.label(format!("{}", j + ((newpage - 1) * 5)))
@@ -185,14 +193,8 @@ async fn newpage(component: MessageComponentInteraction, json: Value, ctx: Conte
 // localclient:3dc823dd1aacdee5068cc57037192a79971a4e4a
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
-    let mut cfg: config::Config = confy::load("piwacy", None)?;
-    if !cfg.endpoint.ends_with('/') {
-        cfg.endpoint.push('/');
-    }
 
-
-
-    let mut client = Client::builder(cfg.token, GatewayIntents::empty())
+    let mut client = Client::builder(&cfg.token, GatewayIntents::empty())
     .event_handler(Handler {
     })
     .application_id(1034141949222998086)

@@ -1542,6 +1542,7 @@ dependencies = [
  "fs",
  "html-extractor 1.0.0",
  "http",
+ "once_cell",
  "regex",
  "reqwest 0.11.12",
  "serde",
