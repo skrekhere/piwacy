@@ -29,7 +29,11 @@ pub async fn run(ctx: Context, command: &serenity::model::application::interacti
                     desc.push_str(format!("{} - {:?}%\n\n", j.get(key).unwrap().get("name").unwrap().as_str().unwrap(), ((j.get(key).unwrap().get("progress").unwrap().as_f64().unwrap() * 100.0).round() / 100.0)).as_str());
                 }
             }
-            e.description(format!("```\n{}\n```", desc))
+            if desc == "" {
+                e.description("```\nNot currently downloading anything!\n```")
+            } else {
+                e.description(format!("```\n{}\n```", desc))
+            }
         }))
     }).await.unwrap();
     "".to_string()
