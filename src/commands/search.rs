@@ -41,7 +41,7 @@ pub async fn run(_options: &[CommandDataOption], command: &serenity::model::appl
                     c.create_action_row(|row| {
                         row.create_button(|button| {
                             button.label(">")
-                            .custom_id(format!("{{\"query\": \"{}\", \"page\": 1, \"action\": \"f\"}}", value))
+                            .custom_id(format!("{{\"query\": \"{}\", \"page\": 1, \"action\": \"f\"}}", value.as_str()))
                         })
                     }).create_action_row(|row| {
                         let mut j: u32 = 0;
@@ -50,7 +50,7 @@ pub async fn run(_options: &[CommandDataOption], command: &serenity::model::appl
                             j += 1;
                             row.create_button(|button| {
                                 button.label(format!("{}", j))
-                                .custom_id(format!("{{\"action\":\"g\", \"query\": \"{}\", \"page\": 1, \"number\": {}}}", value, j))
+                                .custom_id(format!("{{\"action\":\"g\", \"query\": \"{}\", \"page\": 1, \"number\": {}}}", value.as_str(), j))
                             });
                         }
                         row

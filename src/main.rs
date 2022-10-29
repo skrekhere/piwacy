@@ -163,12 +163,12 @@ async fn newpage(component: MessageComponentInteraction, json: Value, ctx: Conte
                 if newpage - 1 != 0 {
                     row.create_button(|button| {
                         button.label("<")
-                        .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap(), newpage))
+                        .custom_id(format!("{{\"query\": \"{}\", \"page\": {}, \"action\": \"b\"}}", json.get("query").unwrap().as_str().unwrap(), newpage))
                     });
                 }
                 row.create_button(|button| {
                     button.label(">")
-                    .custom_id(format!("{{\"query\": {}, \"page\": {}, \"action\": \"f\"}}", json.get("query").unwrap(), newpage))
+                    .custom_id(format!("{{\"query\": \"{}\", \"page\": {}, \"action\": \"f\"}}", json.get("query").unwrap().as_str().unwrap(), newpage))
                 })
             }).create_action_row(|row| {
                 let mut j: i64 = 0;
@@ -177,7 +177,7 @@ async fn newpage(component: MessageComponentInteraction, json: Value, ctx: Conte
                     j += 1;
                     row.create_button(|button| {
                         button.label(format!("{}", j + ((newpage - 1) * 5)))
-                        .custom_id(format!("{{\"action\":\"g\", \"query\": \"{}\", \"page\": {}, \"number\": {}}}", json.get("query").unwrap(), newpage, j))
+                        .custom_id(format!("{{\"action\":\"g\", \"query\": \"{}\", \"page\": {}, \"number\": {}}}", json.get("query").unwrap().as_str().unwrap(), newpage, j))
                     });
                 }
                 row
@@ -200,6 +200,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     .application_id(1034141949222998086)
     .await
     .expect("Error creating client");
+    let mut deluge = Deluge::new((&cfg.endpoint).clone())?;
+    deluge.login((&cfg.password).clone()).await?;
+    deluge.connect_to_first_available_host().await?;
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);

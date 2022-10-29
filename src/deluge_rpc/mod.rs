@@ -99,9 +99,21 @@ impl Deluge {
             .send()
             .await?;
         self.id += 1;
+        let res1 = self
+            .client
+            .post(format!("{}json", self.endpoint))
+            .body(format!(
+                    "{{\"method\": \"daemon.get_method_list\", \"params\": [], \"id\": {}}}",
+                    self.id
+            ))
+            .send()
+            .await?;
+        self.id += 1;
         if self.id >= 1024 {
             self.id = 0
         }
+        println!("{}", res.text().await.unwrap());
+        println!("{}", res1.text().await.unwrap());
         Ok(())
     }
 
